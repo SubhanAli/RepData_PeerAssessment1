@@ -1,0 +1,122 @@
+---
+title: "Personal Tracking Analysis - Insight Demo"
+output: 
+  html_document:
+    keep_md: true
+---
+
+## Loading and preprocessing the data
+
+```{r}
+data <- read.csv("activity.csv")
+head(data, 15)
+str(data)
+summary(data)
+
+complete <- data[complete.cases(data), ]
+head(complete, 15)
+str(complete)
+summary(complete)
+```
+
+## Average number of steps taken per day
+
+```{r}
+complete.sum <- tapply(complete$steps,complete$date,sum)
+hist(complete.sum, breaks = 20, ylab = "Frequency", xlab = "Steps Per Day", main = "Histogram of Steps Per Day")
+complete.mean <- mean(complete.sum[complete.cases(complete.sum)])  
+```
+The mean is: 
+```{r, echo = FALSE}
+complete.mean
+```
+
+```{r}
+complete.median <- median(complete.sum[complete.cases(complete.sum)])
+```
+The median is: 
+```{r, echo = FALSE}
+complete.median
+```
+
+## Average Daily Activity Pattern
+
+```{r}
+time.series <- tapply(complete$steps,complete$interval,mean)
+plot(y=time.series,x=row.names(time.series), type = 'l', xlab = "5-Minute Intervals", ylab ="Average Number of Steps Taken", main ="Time Series Plot of 5 Minute Intervals")
+
+max <- which.max(time.series)
+```
+The 5 minute interval with the maximum average of steps on all days is:
+```{r, echo = FALSE}
+names(max)
+```
+
+## Imputing missing values
+
+The total number of missing values is: 
+```{r}
+sum(is.na(data))
+```
+
+```{r}
+newdata <- data
+for (i in 1:nrow(newdata)) {
+    if (is.na(newdata$steps[i])) {
+        newdata$steps[i] <- time.series[which(newdata$interval[i] == row.names(time.series))]
+    }
+}
+new.sum <- tapply(newdata$steps,newdata$date,sum)
+hist(new.sum, breaks = 20, ylab = "Frequency", xlab = "Steps Per Day", main = "Histogram of Steps Per Day (with Imputed Values)")
+new.mean <- mean(new.sum)
+```
+
+The mean of the imputed data is: 
+```{r, echo=FALSE}
+new.mean
+```
+
+```{r}
+new.median <- median(new.sum)
+```
+
+The median of the imputed data is:
+```{r, echo=FALSE}
+new.median
+```
+The difference in the means are:
+```{r, echo=FALSE}
+abs(new.mean-complete.mean)
+```
+The difference in the medians are:
+```{r, echo=FALSE}
+abs(new.median-complete.median)
+```
+
+## Weekdays vs. Weekends
+
+```{r}
+newdata$weekdays <- ifelse(as.POSIXlt(newdata$date)$wday %in% c(0,6), 'weekend', 'weekday')
+averagednewdata <- aggregate(steps ~ interval + weekdays, data=newdata, mean)
+averagednewdataWeekend <- subset(averagednewdata, weekdays == "weekend")
+averagednewdataWeekday <- subset(averagednewdata, weekdays == "weekday")
+```
+
+```{r, echo=FALSE, results='hide'}
+#plot(y=averagednewdataWeekend$steps,x=averagednewdataWeekend$interval, type = 'l', xlab = "5-Minute Intervals", ylab = "Average Number of Steps Taken", main ="Time Series Plot of the Weekend", ylim=c(0,250))
+summary(averagednewdataWeekend$steps)
+
+#plot(y=averagednewdataWeekday$steps,x=averagednewdataWeekday$interval, type = 'l', xlab = "5-Minute Intervals", ylab = "Average Number of Steps Taken", main ="Time Series Plot of the Weekdays", ylim=c(0,250))
+summary(averagednewdataWeekday$steps)
+```
+
+```{r}
+linewidth <- 2
+
+plot(c(0,2500),c(0,250),type= 'n', xlab= "5-Minute Intervals", ylab = "Average Number of Steps Taken")
+lines(x = averagednewdataWeekend$interval, y = averagednewdataWeekend$steps,col="red",lwd=linewidth) 
+lines(x = averagednewdataWeekday$interval, y = averagednewdataWeekday$steps,col="blue",lwd=linewidth) 
+legend(1900, 250, c("Weekday", "Weekend"), lty=c(1,1), lwd=c(linewidth,linewidth), col=c("blue","red")) 
+summary(averagednewdataWeekend$steps)
+summary(averagednewdataWeekday$steps)
+```
